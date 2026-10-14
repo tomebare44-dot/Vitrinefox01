@@ -215,14 +215,18 @@ export const dbService = {
           query = query.eq('is_deleted', false);
         }
         const { data, error } = await query.order('created_at', { ascending: false });
-        if (!error && data && data.length > 0) {
+        if (!error && Array.isArray(data)) {
           return data.map(p => ({
             ...p,
+            is_active: p.is_active !== false,
+            is_published: p.is_published !== false,
             price: Number(p.price),
             promotional_price: p.promotional_price ? Number(p.promotional_price) : null,
             stock: Number(p.stock),
-            images: Array.isArray(p.images) ? p.images : (typeof p.images === 'string' ? JSON.parse(p.images) : [])
+            images: Array.isArray(p.images) ? p.images : (typeof p.images === 'string' ? (p.images.startsWith('[') ? JSON.parse(p.images) : [p.images]) : [])
           }));
+        } else if (error) {
+          console.warn('[VitrineFox DB] Supabase query error, checking local store:', error.message);
         }
       } catch (e) {
         console.warn('[VitrineFox DB] Supabase query failed, falling back to local persistent DB:', e);
@@ -245,10 +249,12 @@ export const dbService = {
         if (!error && data) {
           return {
             ...data,
+            is_active: data.is_active !== false,
+            is_published: data.is_published !== false,
             price: Number(data.price),
             promotional_price: data.promotional_price ? Number(data.promotional_price) : null,
             stock: Number(data.stock),
-            images: Array.isArray(data.images) ? data.images : (typeof data.images === 'string' ? JSON.parse(data.images) : [])
+            images: Array.isArray(data.images) ? data.images : (typeof data.images === 'string' ? (data.images.startsWith('[') ? JSON.parse(data.images) : [data.images]) : [])
           };
         }
       } catch (e) {
@@ -267,7 +273,10 @@ export const dbService = {
     const newProduct: Product = {
       ...productData,
       id,
-      slug: productData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+      slug: productData.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+      is_active: productData.is_active !== false,
+      is_published: true,
+      publication_status: 'published',
       is_deleted: false,
       created_at: now,
       updated_at: now
@@ -277,11 +286,27 @@ export const dbService = {
       try {
         const { error } = await supabase.from('products').insert([
           {
-            ...newProduct,
-            images: JSON.stringify(newProduct.images)
+            id: newProduct.id,
+            name: newProduct.name,
+            slug: newProduct.slug,
+            description: newProduct.description,
+            price: newProduct.price,
+            promotional_price: newProduct.promotional_price,
+            stock: newProduct.stock,
+            category: newProduct.category,
+            images: newProduct.images,
+            is_active: newProduct.is_active,
+            redirect_url: newProduct.redirect_url || null,
+            is_deleted: false,
+            created_at: now,
+            updated_at: now
           }
         ]);
-        if (error) console.error('[VitrineFox DB] Supabase product insert error:', error);
+        if (error) {
+          console.error('[VitrineFox DB] Supabase product insert error:', error.message);
+        } else {
+          console.log('[VitrineFox DB] Product saved to Supabase PostgreSQL:', newProduct.name);
+        }
       } catch (e) {
         console.warn('[VitrineFox DB] Supabase insert failed, storing locally:', e);
       }
@@ -718,5 +743,46 @@ export const dbService = {
     });
     writeLocalDb(local);
     return true;
+  },
+
+  async testSupabaseConnection(): Promise<{
+    connected: boolean;
+    message: string;
+    databaseType: 'supabase_postgres' | 'persistent_json_store';
+    productsCount?: number;
+  }> {
+    if (!supabase) {
+      const local = readLocalDb();
+      return {
+        connected: false,
+        databaseType: 'persistent_json_store',
+        message: 'Supabase PostgreSQL não conectado. O sistema está utilizando o banco de dados centralizado local do servidor. Para ativar o Supabase, configure SUPABASE_URL e SUPABASE_ANON_KEY no painel de variáveis de ambiente.',
+        productsCount: local.products.filter(p => !p.is_deleted).length
+      };
+    }
+
+    try {
+      const { data, error, count } = await supabase.from('products').select('id', { count: 'exact' });
+      if (error) {
+        return {
+          connected: false,
+          databaseType: 'supabase_postgres',
+          message: `Falha na consulta ao Supabase: ${error.message}. Verifique as permissões de RLS no editor SQL do Supabase.`
+        };
+      }
+
+      return {
+        connected: true,
+        databaseType: 'supabase_postgres',
+        message: 'Conexão com o banco Supabase PostgreSQL estabelecida e funcionando com sucesso!',
+        productsCount: count || (data ? data.length : 0)
+      };
+    } catch (err: any) {
+      return {
+        connected: false,
+        databaseType: 'supabase_postgres',
+        message: `Erro ao conectar com Supabase: ${err.message || 'Erro desconhecido'}`
+      };
+    }
   }
 };

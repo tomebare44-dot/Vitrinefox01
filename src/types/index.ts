@@ -9,6 +9,8 @@ export interface Product {
   category: string;
   images: string[];
   is_active: boolean;
+  is_published: boolean;
+  publication_status?: 'draft' | 'published' | 'disabled';
   redirect_url?: string | null;
   is_deleted?: boolean;
   created_at: string;

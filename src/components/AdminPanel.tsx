@@ -83,6 +83,33 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Delete confirm state
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
+  // Database diagnosis state
+  const [dbTesting, setDbTesting] = useState(false);
+  const [dbTestResult, setDbTestResult] = useState<{
+    connected: boolean;
+    message: string;
+    databaseType: string;
+    productsCount?: number;
+  } | null>(null);
+
+  const handleTestDatabaseConnection = async () => {
+    setDbTesting(true);
+    try {
+      const res = await api.testDatabaseConnection();
+      setDbTestResult(res);
+      showNotification(res.message, res.connected ? 'success' : 'error');
+    } catch (err: any) {
+      setDbTestResult({
+        connected: false,
+        message: err.message || 'Falha ao testar conexão com o banco.',
+        databaseType: 'unknown'
+      });
+      showNotification(err.message || 'Falha ao testar banco.', 'error');
+    } finally {
+      setDbTesting(false);
+    }
+  };
+
   const showNotification = (text: string, type: 'success' | 'error' = 'success') => {
     setNotification({ text, type });
     setTimeout(() => setNotification(null), 3500);

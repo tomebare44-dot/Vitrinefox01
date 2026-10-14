@@ -97,20 +97,34 @@ ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_events ENABLE ROW LEVEL SECURITY;
 
--- Categorias: Leitura pública
+-- Limpar políticas existentes se já foram criadas
+DROP POLICY IF EXISTS "Categorias leitura pública" ON public.categories;
+DROP POLICY IF EXISTS "Categorias controle total" ON public.categories;
+DROP POLICY IF EXISTS "Produtos leitura pública vitrine" ON public.products;
+DROP POLICY IF EXISTS "Produtos controle total" ON public.products;
+DROP POLICY IF EXISTS "Permitir checkout público" ON public.orders;
+DROP POLICY IF EXISTS "Permitir itens checkout público" ON public.order_items;
+
+-- Categorias: Leitura pública e controle total via API autorizada
 CREATE POLICY "Categorias leitura pública" ON public.categories
     FOR SELECT USING (true);
 
--- Produtos: Leitura pública somente de produtos ativos e não excluídos
-CREATE POLICY "Produtos leitura pública vitrine" ON public.products
-    FOR SELECT USING (is_active = true AND is_deleted = false);
+CREATE POLICY "Categorias controle total" ON public.categories
+    FOR ALL USING (true) WITH CHECK (true);
 
--- Pedidos: Criação de pedidos no checkout
+-- Produtos: Leitura pública da vitrine e controle total pelo painel
+CREATE POLICY "Produtos leitura pública vitrine" ON public.products
+    FOR SELECT USING (true);
+
+CREATE POLICY "Produtos controle total" ON public.products
+    FOR ALL USING (true) WITH CHECK (true);
+
+-- Pedidos: Registro e consulta
 CREATE POLICY "Permitir checkout público" ON public.orders
-    FOR INSERT WITH CHECK (true);
+    FOR ALL USING (true) WITH CHECK (true);
 
 CREATE POLICY "Permitir itens checkout público" ON public.order_items
-    FOR INSERT WITH CHECK (true);
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- 8. CONFIGURAÇÃO DE BUCKET DE IMAGENS NO SUPABASE STORAGE
 -- Executar no SQL Editor do Supabase se o bucket não existir:
@@ -118,5 +132,11 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('product-images', 'product-images', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
+DROP POLICY IF EXISTS "Imagens públicas de produtos" ON storage.objects;
+DROP POLICY IF EXISTS "Permitir upload de imagens" ON storage.objects;
+
 CREATE POLICY "Imagens públicas de produtos" ON storage.objects
     FOR SELECT USING (bucket_id = 'product-images');
+
+CREATE POLICY "Permitir upload de imagens" ON storage.objects
+    FOR ALL USING (bucket_id = 'product-images') WITH CHECK (bucket_id = 'product-images');

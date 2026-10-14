@@ -37,9 +37,30 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 }
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+
+// Helper to parse cookies from request header
+function parseCookies(req: Request): Record<string, string> {
+  const header = req.headers.cookie;
+  if (!header) return {};
+  const cookies: Record<string, string> = {};
+  header.split(';').forEach(c => {
+    const [name, ...val] = c.trim().split('=');
+    if (name) {
+      try {
+        cookies[name] = decodeURIComponent(val.join('='));
+      } catch {
+        cookies[name] = val.join('=');
+      }
+    }
+  });
+  return cookies;
+}
 
 // Serve uploaded product images statically
 app.use('/uploads', express.static(UPLOADS_DIR));
@@ -51,15 +72,27 @@ function generateSessionToken(): string {
   return token;
 }
 
+// Helper to extract session token from Authorization header or Cookie
+function getSessionToken(req: Request): string | null {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  const cookies = parseCookies(req);
+  if (cookies.admin_session) {
+    return cookies.admin_session;
+  }
+  return null;
+}
+
 // Middleware to verify admin authentication
 function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Acesso não autorizado. Faça login administrativo.' });
+  const token = getSessionToken(req);
+  if (!token) {
+    res.status(401).json({ error: 'Acesso não autorizado. Faça login administrativo com a senha de acesso.' });
     return;
   }
 
-  const token = authHeader.substring(7);
   if (!activeSessions.has(token)) {
     res.status(401).json({ error: 'Sessão expirada ou inválida. Por favor, faça login novamente.' });
     return;
@@ -190,6 +223,18 @@ app.post('/api/auth/login', (req, res) => {
   if (password === ADMIN_PASSWORD) {
     loginAttempts.delete(ip); // Reset attempts
     const token = generateSessionToken();
+
+    // Set secure HttpOnly cookie for session persistence across browsers
+    const cookieFlags = [
+      `admin_session=${token}`,
+      'Path=/',
+      'HttpOnly',
+      'SameSite=Lax',
+      'Max-Age=86400', // 24 hours
+      ...(isProduction ? ['Secure'] : [])
+    ].join('; ');
+    res.setHeader('Set-Cookie', cookieFlags);
+
     res.json({
       success: true,
       token,
@@ -219,11 +264,22 @@ app.get('/api/auth/verify', requireAdminAuth, (req, res) => {
 });
 
 app.post('/api/auth/logout', (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
+  const token = getSessionToken(req);
+  if (token) {
     activeSessions.delete(token);
   }
+
+  // Clear cookie
+  const clearCookieFlags = [
+    'admin_session=',
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    'Max-Age=0',
+    ...(isProduction ? ['Secure'] : [])
+  ].join('; ');
+  res.setHeader('Set-Cookie', clearCookieFlags);
+
   res.json({ success: true, message: 'Sessão encerrada com sucesso.' });
 });
 
@@ -473,6 +529,19 @@ app.get('/api/admin/stats', requireAdminAuth, async (req, res) => {
   }
 });
 
+// Admin Database Connection Test & Synchronization
+app.get('/api/admin/db/test', requireAdminAuth, async (req, res) => {
+  try {
+    const result = await dbService.testSupabaseConnection();
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({
+      connected: false,
+      message: 'Erro ao executar teste de banco de dados: ' + (error.message || 'Erro interno')
+    });
+  }
+});
+
 /* ==========================================================================
    WEBHOOK MERCADO PAGO (COM IDEMPOTÊNCIA)
    ========================================================================== */
@@ -501,7 +570,7 @@ app.post('/api/webhooks/mercadopago', async (req, res) => {
    VITE DEV SERVER MOUNT & PRODUCTION STATIC SERVING
    ========================================================================== */
 
-async function startServer() {
+export async function startServer() {
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
@@ -527,6 +596,11 @@ async function startServer() {
   });
 }
 
-startServer().catch(err => {
-  console.error('[VitrineFox] Fatal error starting server:', err);
-});
+// Start standalone server unless executed within a serverless runtime (like Vercel)
+if (!process.env.VERCEL) {
+  startServer().catch(err => {
+    console.error('[VitrineFox] Fatal error starting server:', err);
+  });
+}
+
+export default app;

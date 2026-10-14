@@ -22,10 +22,11 @@ export const authStorage = {
   }
 };
 
-function getAuthHeaders(): HeadersInit {
+function getAuthHeaders(extraHeaders: Record<string, string> = {}): HeadersInit {
   const token = authStorage.getToken();
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json'
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...extraHeaders
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -33,57 +34,127 @@ function getAuthHeaders(): HeadersInit {
   return headers;
 }
 
+/**
+ * Robust, safe fetch wrapper that prevents:
+ * "Unexpected token 'T', "The page c"... is not valid JSON"
+ * Inspects content-type, catches non-JSON HTML error pages (like Vercel 404s),
+ * and provides clear, descriptive error messages.
+ */
+async function safeApiRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const opts: RequestInit = {
+    ...options,
+    credentials: 'include' // Always send cookies (admin_session)
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(url, opts);
+  } catch (netErr: any) {
+    console.error(`[VitrineFox API Network Error] ${url}:`, netErr);
+    throw new Error('Falha de conexão com o servidor da VitrineFox. Verifique se o servidor está ativo.');
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  const isJson = contentType.toLowerCase().includes('application/json');
+
+  let textBody = '';
+  try {
+    textBody = await res.text();
+  } catch {
+    textBody = '';
+  }
+
+  let jsonData: any = null;
+  if (isJson && textBody.trim()) {
+    try {
+      jsonData = JSON.parse(textBody);
+    } catch (parseErr) {
+      console.warn(`[VitrineFox API Parse Error] Não foi possível interpretar resposta JSON de ${url}:`, parseErr);
+    }
+  }
+
+  if (!res.ok) {
+    // If it's a 404 and returned HTML (typical Vercel or proxy 404 "The page could not be found")
+    if (res.status === 404) {
+      if (!isJson || textBody.includes('The page') || textBody.includes('<!DOCTYPE')) {
+        throw new Error(
+          `A rota (${url}) não foi encontrada no servidor (Erro 404). Se o projeto foi publicado na Vercel, certifique-se de que a rota Serverless /api está ativa e as variáveis do Supabase estão configuradas.`
+        );
+      }
+      throw new Error(jsonData?.error || 'Recurso não encontrado no servidor.');
+    }
+
+    if (res.status === 401) {
+      throw new Error(jsonData?.error || 'Senha incorreta ou acesso não autorizado.');
+    }
+
+    if (res.status === 429) {
+      throw new Error(jsonData?.error || 'Limite de tentativas excedido. Acesso bloqueado temporariamente por segurança.');
+    }
+
+    if (res.status === 500) {
+      throw new Error(jsonData?.error || 'Erro interno no servidor ao processar os dados.');
+    }
+
+    if (jsonData && jsonData.error) {
+      throw new Error(jsonData.error);
+    }
+
+    throw new Error(`Erro na comunicação com o servidor (Status HTTP ${res.status}).`);
+  }
+
+  if (jsonData !== null) {
+    return jsonData as T;
+  }
+
+  // If response was ok but body was empty or not json
+  return {} as T;
+}
+
 export const api = {
   // Public Storefront APIs
   async getProducts(): Promise<Product[]> {
-    const res = await fetch('/api/products');
-    if (!res.ok) throw new Error('Falha ao obter produtos do catálogo.');
-    const data = await res.json();
+    const data = await safeApiRequest<{ products: Product[] }>('/api/products');
     return data.products || [];
   },
 
   async getProduct(id: string): Promise<Product> {
-    const res = await fetch(`/api/products/${id}`);
-    if (!res.ok) throw new Error('Produto não encontrado.');
-    const data = await res.json();
+    const data = await safeApiRequest<{ product: Product }>(`/api/products/${id}`);
+    if (!data.product) throw new Error('Produto não encontrado.');
     return data.product;
   },
 
   async getCategories(): Promise<Category[]> {
-    const res = await fetch('/api/categories');
-    if (!res.ok) throw new Error('Falha ao obter categorias.');
-    const data = await res.json();
+    const data = await safeApiRequest<{ categories: Category[] }>('/api/categories');
     return data.categories || [];
   },
 
+  // Category Management
   async createCategory(name: string, icon?: string): Promise<Category> {
-    const res = await fetch('/api/admin/categories', {
+    const data = await safeApiRequest<{ category: Category }>('/api/admin/categories', {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ name, icon })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro ao criar categoria.');
+    if (!data.category) throw new Error('Falha ao cadastrar categoria.');
     return data.category;
   },
 
   async updateCategory(id: string, name: string): Promise<Category> {
-    const res = await fetch(`/api/admin/categories/${id}`, {
+    const data = await safeApiRequest<{ category: Category }>(`/api/admin/categories/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({ name })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro ao atualizar categoria.');
+    if (!data.category) throw new Error('Falha ao atualizar categoria.');
     return data.category;
   },
 
   async deleteCategory(id: string): Promise<boolean> {
-    const res = await fetch(`/api/admin/categories/${id}`, {
+    await safeApiRequest<{ success: boolean }>(`/api/admin/categories/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
-    if (!res.ok) throw new Error('Erro ao excluir categoria.');
     return true;
   },
 
@@ -95,48 +166,40 @@ export const api = {
     items: { product_id: string; quantity: number }[];
     payment_method: 'pix' | 'credit_card' | 'boleto';
   }): Promise<{ success: boolean; order: Order; message?: string }> {
-    const res = await fetch('/api/orders', {
+    return await safeApiRequest<{ success: boolean; order: Order; message?: string }>('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Erro ao finalizar pedido.');
-    }
-    return data;
   },
 
   async getOrder(id: string): Promise<Order> {
-    const res = await fetch(`/api/orders/${id}`);
-    if (!res.ok) throw new Error('Pedido não localizado.');
-    const data = await res.json();
+    const data = await safeApiRequest<{ order: Order }>(`/api/orders/${id}`);
+    if (!data.order) throw new Error('Pedido não localizado.');
     return data.order;
   },
 
   // Admin Auth APIs
   async login(password: string): Promise<{ token: string; message: string }> {
-    const res = await fetch('/api/auth/login', {
+    const data = await safeApiRequest<{ success: boolean; token: string; message: string }>('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password })
     });
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Senha incorreta.');
+
+    if (data.token) {
+      authStorage.setToken(data.token);
     }
-    authStorage.setToken(data.token);
     return data;
   },
 
   async verifyAuth(): Promise<boolean> {
     const token = authStorage.getToken();
-    if (!token) return false;
     try {
-      const res = await fetch('/api/auth/verify', {
+      const data = await safeApiRequest<{ valid: boolean }>('/api/auth/verify', {
         headers: getAuthHeaders()
       });
-      return res.ok;
+      return !!data.valid;
     } catch {
       return false;
     }
@@ -144,7 +207,7 @@ export const api = {
 
   async logout(): Promise<void> {
     try {
-      await fetch('/api/auth/logout', {
+      await safeApiRequest('/api/auth/logout', {
         method: 'POST',
         headers: getAuthHeaders()
       });
@@ -154,94 +217,91 @@ export const api = {
 
   // Admin Catalog & Orders APIs
   async getAdminProducts(): Promise<Product[]> {
-    const res = await fetch('/api/admin/products', {
+    const data = await safeApiRequest<{ products: Product[] }>('/api/admin/products', {
       headers: getAuthHeaders()
     });
-    if (!res.ok) throw new Error('Falha ao listar produtos no painel.');
-    const data = await res.json();
     return data.products || [];
   },
 
   async createProduct(productData: Partial<Product>): Promise<Product> {
-    const res = await fetch('/api/admin/products', {
+    const data = await safeApiRequest<{ product: Product }>('/api/admin/products', {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(productData)
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro ao cadastrar produto.');
+    if (!data.product) throw new Error('Falha ao cadastrar produto.');
     return data.product;
   },
 
   async updateProduct(id: string, updates: Partial<Product>): Promise<Product> {
-    const res = await fetch(`/api/admin/products/${id}`, {
+    const data = await safeApiRequest<{ product: Product }>(`/api/admin/products/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(updates)
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro ao atualizar produto.');
+    if (!data.product) throw new Error('Falha ao atualizar produto.');
     return data.product;
   },
 
   async deleteProduct(id: string): Promise<boolean> {
-    const res = await fetch(`/api/admin/products/${id}`, {
+    await safeApiRequest<{ success: boolean }>(`/api/admin/products/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'Erro ao excluir produto.');
-    }
     return true;
   },
 
   async updateStock(id: string, stock: number): Promise<void> {
-    const res = await fetch(`/api/admin/products/${id}/stock`, {
+    await safeApiRequest(`/api/admin/products/${id}/stock`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify({ stock })
     });
-    if (!res.ok) throw new Error('Erro ao ajustar estoque.');
   },
 
   async uploadImage(base64Data: string, filename: string): Promise<string> {
-    const res = await fetch('/api/admin/upload', {
+    const data = await safeApiRequest<{ url: string }>('/api/admin/upload', {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ base64Data, filename })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Falha no upload da imagem.');
+    if (!data.url) throw new Error('Falha no upload da imagem.');
     return data.url;
   },
 
   async getAdminOrders(): Promise<Order[]> {
-    const res = await fetch('/api/admin/orders', {
+    const data = await safeApiRequest<{ orders: Order[] }>('/api/admin/orders', {
       headers: getAuthHeaders()
     });
-    if (!res.ok) throw new Error('Falha ao listar pedidos.');
-    const data = await res.json();
     return data.orders || [];
   },
 
   async updateOrderStatus(id: string, status: Order['status'], paymentStatus?: Order['payment_status']): Promise<Order> {
-    const res = await fetch(`/api/admin/orders/${id}/status`, {
+    const data = await safeApiRequest<{ order: Order }>(`/api/admin/orders/${id}/status`, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify({ status, payment_status: paymentStatus })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro ao alterar status do pedido.');
+    if (!data.order) throw new Error('Falha ao alterar status do pedido.');
     return data.order;
   },
 
   async getAdminStats(): Promise<AdminStats> {
-    const res = await fetch('/api/admin/stats', {
+    const data = await safeApiRequest<{ stats: AdminStats }>('/api/admin/stats', {
       headers: getAuthHeaders()
     });
-    if (!res.ok) throw new Error('Falha ao obter dados estatísticos.');
-    const data = await res.json();
     return data.stats;
+  },
+
+  // Test Database Connection (Supabase / Local)
+  async testDatabaseConnection(): Promise<{
+    connected: boolean;
+    message: string;
+    databaseType: 'supabase_postgres' | 'persistent_json_store';
+    productsCount?: number;
+  }> {
+    return await safeApiRequest('/api/admin/db/test', {
+      headers: getAuthHeaders()
+    });
   }
 };
