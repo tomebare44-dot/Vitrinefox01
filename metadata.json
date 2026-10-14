@@ -1,0 +1,6 @@
+{
+  "name": "VitrineFox",
+  "description": "Vitrine online moderna e profissional com gestão de catálogo, controle de estoque em tempo real e checkout integrado.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

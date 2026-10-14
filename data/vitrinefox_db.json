@@ -1,0 +1,224 @@
+{
+  "products": [
+    {
+      "name": "Foness",
+      "slug": "foness",
+      "description": "Fone muito bom",
+      "price": 5,
+      "promotional_price": 1,
+      "stock": 10,
+      "category": "Eletrônicos",
+      "images": [
+        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"
+      ],
+      "is_active": true,
+      "redirect_url": "https://s.shopee.com.br/9fLeM1bTjv",
+      "id": "prod-1791948380217-126q9",
+      "is_deleted": false,
+      "created_at": "2026-10-14T03:26:20.217Z",
+      "updated_at": "2026-10-14T03:26:20.217Z"
+    },
+    {
+      "name": "Fone Fox Pro Gamer 7.1",
+      "slug": "fone-fox-pro-gamer-7-1",
+      "description": "Headset gamer com som surround 7.1 e microfone destacável.",
+      "price": 389.9,
+      "promotional_price": null,
+      "stock": 15,
+      "category": "Eletrônicos",
+      "images": [
+        "https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=800&q=80"
+      ],
+      "is_active": true,
+      "redirect_url": "https://mercadolivre.com.br/exemplo-link-afiliado",
+      "id": "prod-1791948263372-uvlct",
+      "is_deleted": false,
+      "created_at": "2026-10-14T03:24:23.372Z",
+      "updated_at": "2026-10-14T03:24:23.372Z"
+    },
+    {
+      "name": "Powerbank Fox Turbo 20000mAh",
+      "slug": "powerbank-fox-turbo-20000mah",
+      "description": "Carregador portátil ultrarrápido 65W Power Delivery com display digital de porcentagem.",
+      "price": 199.9,
+      "promotional_price": 169.9,
+      "stock": 20,
+      "category": "Eletrônicos",
+      "images": [
+        "https://images.unsplash.com/photo-1609592424364-4e782a2ea6c6?auto=format&fit=crop&w=800&q=80"
+      ],
+      "is_active": true,
+      "id": "prod-1791947868686-kg9ra",
+      "is_deleted": false,
+      "created_at": "2026-10-14T03:17:48.686Z",
+      "updated_at": "2026-10-14T03:17:48.686Z"
+    },
+    {
+      "id": "prod-01-fox-watch",
+      "name": "Smartwatch Fox Ultra Pro AMOLED",
+      "slug": "smartwatch-fox-ultra-pro",
+      "description": "Smartwatch esportivo de alta performance com tela AMOLED de 1.96\", monitoramento cardíaco contínuo, oxímetro SpO2, GPS integrado e resistência à água 5ATM. Bateria de até 14 dias.",
+      "price": 349.9,
+      "promotional_price": 289.9,
+      "stock": 17,
+      "category": "Eletrônicos",
+      "images": [
+        "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=800&q=80"
+      ],
+      "is_active": true,
+      "is_deleted": false,
+      "created_at": "2026-10-09T03:17:33.074Z",
+      "updated_at": "2026-10-14T03:17:56.572Z"
+    },
+    {
+      "id": "prod-02-fox-pods",
+      "name": "Fone FoxPods Max ANC Wireless",
+      "slug": "fone-foxpods-max-anc",
+      "description": "Fones de ouvido Bluetooth 5.3 com cancelamento ativo de ruído ambiente (ANC), drivers de titânio de 40mm para graves profundos, microfones com isolamento de voz e 45 horas de autonomia.",
+      "price": 499,
+      "promotional_price": 399.9,
+      "stock": 12,
+      "category": "Eletrônicos",
+      "images": [
+        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1484704849700-f032a568e944?auto=format&fit=crop&w=800&q=80"
+      ],
+      "is_active": true,
+      "is_deleted": false,
+      "created_at": "2026-10-10T03:17:33.074Z",
+      "updated_at": "2026-10-14T03:17:33.074Z"
+    },
+    {
+      "id": "prod-03-mochila-urban",
+      "name": "Mochila Fox Urban Antifurto Impermeável",
+      "slug": "mochila-fox-urban-antifurto",
+      "description": "Mochila executiva com tecido Oxford impermeável, trava com segredo TSA embutida, bolso para notebook de até 16 polegadas, porta USB externa e compartimento ergonômico anti-impacto.",
+      "price": 259.9,
+      "promotional_price": 199.9,
+      "stock": 25,
+      "category": "Acessórios",
+      "images": [
+        "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1622560480605-d83c853bc5c3?auto=format&fit=crop&w=800&q=80"
+      ],
+      "is_active": true,
+      "is_deleted": false,
+      "created_at": "2026-10-11T03:17:33.074Z",
+      "updated_at": "2026-10-14T03:17:33.074Z"
+    },
+    {
+      "id": "prod-04-garrafa-inox",
+      "name": "Garrafa Térmica Fox Termic 750ml Inox Duplo",
+      "slug": "garrafa-termica-fox-termic",
+      "description": "Garrafa térmica construída em Aço Inox 18/8 com isolamento a vácuo de parede dupla. Mantém líquidos gelados por até 24 horas ou quentes por até 12 horas. Livre de BPA.",
+      "price": 129.9,
+      "promotional_price": 99.9,
+      "stock": 40,
+      "category": "Casa & Estilo",
+      "images": [
+        "https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&w=800&q=80"
+      ],
+      "is_active": true,
+      "is_deleted": false,
+      "created_at": "2026-10-12T03:17:33.074Z",
+      "updated_at": "2026-10-14T03:17:33.074Z"
+    },
+    {
+      "id": "prod-05-teclado-stealth",
+      "name": "Teclado Mecânico Fox Stealth RGB Mecânico",
+      "slug": "teclado-mecanico-fox-stealth",
+      "description": "Teclado mecânico compacto 75% com switches silenciosos lubrificados de fábrica, keycaps PBT doubleshot, iluminação RGB per-key personalizável e conexão tri-mode (Bluetooth, 2.4Ghz e cabo).",
+      "price": 420,
+      "promotional_price": 369,
+      "stock": 8,
+      "category": "Eletrônicos",
+      "images": [
+        "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=800&q=80"
+      ],
+      "is_active": true,
+      "is_deleted": false,
+      "created_at": "2026-10-13T03:17:33.074Z",
+      "updated_at": "2026-10-14T03:17:33.074Z"
+    },
+    {
+      "id": "prod-06-oculos-polarizado",
+      "name": "Óculos Polarizado Fox Carbon UV400",
+      "slug": "oculos-polarizado-fox-carbon",
+      "description": "Armação ultra-leve em fibra de carbono com lentes polarizadas TAC antirreflexo e proteção total UVA/UVB 400. Inclui estojo rígido e flanela de microfibra.",
+      "price": 189.9,
+      "promotional_price": 149.9,
+      "stock": 15,
+      "category": "Moda",
+      "images": [
+        "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=800&q=80"
+      ],
+      "is_active": true,
+      "is_deleted": false,
+      "created_at": "2026-10-14T03:17:33.074Z",
+      "updated_at": "2026-10-14T03:17:33.074Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "cat-eletronicos",
+      "name": "Eletrônicos",
+      "slug": "eletronicos"
+    },
+    {
+      "id": "cat-acessorios",
+      "name": "Acessórios",
+      "slug": "acessorios"
+    },
+    {
+      "id": "cat-moda",
+      "name": "Moda",
+      "slug": "moda"
+    },
+    {
+      "id": "cat-casa",
+      "name": "Casa & Estilo",
+      "slug": "casa-estilo"
+    },
+    {
+      "id": "cat-smartphones-tablets-3uxj",
+      "name": "Smartphones & Tablets",
+      "slug": "smartphones-tablets",
+      "icon": "Tag"
+    }
+  ],
+  "orders": [
+    {
+      "id": "VF-2026-153114",
+      "customer_name": "Felipe Silva",
+      "customer_email": "felipe@vitrinefox.com",
+      "customer_phone": "11988887777",
+      "shipping_address": {
+        "street": "Av. Paulista",
+        "number": "1578",
+        "city": "São Paulo",
+        "state": "SP",
+        "zip": "01310-200"
+      },
+      "items": [
+        {
+          "product_id": "prod-01-fox-watch",
+          "product_name": "Smartwatch Fox Ultra Pro AMOLED",
+          "unit_price": 289.9,
+          "quantity": 1,
+          "subtotal": 289.9,
+          "image_url": "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?auto=format&fit=crop&w=800&q=80"
+        }
+      ],
+      "subtotal": 289.9,
+      "shipping_fee": 0,
+      "total": 289.9,
+      "status": "paid",
+      "payment_method": "pix",
+      "payment_status": "approved",
+      "created_at": "2026-10-14T03:17:56.572Z",
+      "updated_at": "2026-10-14T03:18:04.241Z"
+    }
+  ],
+  "payment_events": []
+}
